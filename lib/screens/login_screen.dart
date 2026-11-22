@@ -4,137 +4,249 @@ import '../app_data.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _accountController = TextEditingController(text: AppData.accountNumber);
   final _pinController = TextEditingController();
   bool _obscure = true;
-  String? _error;
 
   @override
   void dispose() {
-    _accountController.dispose();
     _pinController.dispose();
     super.dispose();
   }
 
   void _login() {
     final pin = _pinController.text.trim();
-    if (_accountController.text.trim().isEmpty) {
-      setState(() => _error = 'Vui lòng nhập số tài khoản');
+    if (pin.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập mật khẩu 6 chữ số')),
+      );
       return;
     }
-    if (pin.length != 6 || int.tryParse(pin) == null) {
-      setState(() => _error = 'Mã PIN phải gồm 6 chữ số');
-      return;
-    }
-    setState(() => _error = null);
     AppData.I.login();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0755A4), Color(0xFF1386D5), Color(0xFF38C0F0)],
+          ),
+        ),
+        child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
-              Container(
-                width: 84,
-                height: 84,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0755A4),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  'MB',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'MB BANK DEMO',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Ứng dụng mô phỏng · không phải ngân hàng thật',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54, fontSize: 13),
-              ),
-              const SizedBox(height: 36),
-              TextField(
-                controller: _accountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Số tài khoản',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.account_balance),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _pinController,
-                keyboardType: TextInputType.number,
-                obscureText: _obscure,
-                maxLength: 6,
-                decoration: InputDecoration(
-                  labelText: 'Mã PIN (6 chữ số)',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscure ? Icons.visibility_off : Icons.visibility,
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text('MB',
+                                style: TextStyle(
+                                  color: Color(0xFF0755A4),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                )),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('MB',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            )),
+                      ],
                     ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.flag, color: Colors.red, size: 16),
+                          SizedBox(width: 4),
+                          Text('VI', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Spacer(),
+
+              // Card đăng nhập
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white30),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.shield_outlined,
+                              color: Colors.white70, size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.more_horiz, color: Colors.white54),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Xin chào,',
+                        style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    const Text(
+                      AppData.accountHolder,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.white54),
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _pinController,
+                        obscureText: _obscure,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                        decoration: InputDecoration(
+                          hintText: 'Mật khẩu',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          border: InputBorder.none,
+                          counterText: '',
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.white54,
+                            ),
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text('Tài khoản khác',
+                              style: TextStyle(color: Colors.white70)),
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text('Quên mật khẩu?',
+                              style: TextStyle(color: Colors.white70)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Nút đăng nhập
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF38C0F0),
+                      foregroundColor: const Color(0xFF0755A4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('Đăng nhập',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        )),
                   ),
                 ),
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red, fontSize: 13),
-                ),
-              ],
+
               const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _login,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('Đăng nhập', style: TextStyle(fontSize: 16)),
+
+              // Bottom options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _bottomOption(Icons.qr_code_scanner, 'Quét QR'),
+                  _bottomOption(Icons.lock_outline, 'Xác thực\nD-OTP'),
+                  _bottomOption(Icons.wallpaper, 'Thay\nảnh nền'),
+                ],
               ),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF2D9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'DEMO: nhập số tài khoản bất kỳ và 6 chữ số bất kỳ để vào app. '
-                  'Dữ liệu lưu trên máy, không thực hiện giao dịch thật.',
-                  style: TextStyle(color: Color(0xFF805000), fontSize: 12),
-                ),
-              ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _bottomOption(IconData icon, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white24,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+        const SizedBox(height: 6),
+        Text(label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ],
     );
   }
 }

@@ -2,10 +2,11 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_data.dart';
 import 'screens/account_screen.dart';
-import 'screens/cards_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/transfer_screen.dart';
+import 'screens/more_screen.dart';
+import 'screens/offers_screen.dart';
+import 'screens/cards_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,26 +21,19 @@ class DemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'MB BANK DEMO',
+      title: 'MB Bank',
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF0755A4),
         scaffoldBackgroundColor: const Color(0xFFF3F6FA),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0755A4),
-          foregroundColor: Colors.white,
-          centerTitle: false,
-        ),
       ),
       home: const _RootGate(),
     );
   }
 }
 
-/// Chuyển giữa màn đăng nhập và app chính tuỳ theo trạng thái đăng nhập.
 class _RootGate extends StatefulWidget {
   const _RootGate();
-
   @override
   State<_RootGate> createState() => _RootGateState();
 }
@@ -63,16 +57,12 @@ class _RootGateState extends State<_RootGate> {
 
   @override
   Widget build(BuildContext context) {
-    return AppData.I.loggedIn
-        ? const MainShell()
-        : const LoginScreen();
+    return AppData.I.loggedIn ? const MainShell() : const LoginScreen();
   }
 }
 
-/// Khung ứng dụng với thanh điều hướng dưới (4 tab).
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
-
   @override
   State<MainShell> createState() => MainShellState();
 }
@@ -86,36 +76,39 @@ class MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final screens = <Widget>[
       HomeScreen(onSwitchTab: switchTo),
-      const TransferScreen(),
       const CardsScreen(),
-      const AccountScreen(),
+      const OffersScreen(),
+      const MoreScreen(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: switchTo,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _index,
+        onTap: switchTo,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF0755A4),
+        unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
-        destinations: const [
-          NavigationDestination(
+        items: const [
+          BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            activeIcon: Icon(Icons.home),
             label: 'Trang chủ',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz),
-            label: 'Chuyển tiền',
-          ),
-          NavigationDestination(
+          BottomNavigationBarItem(
             icon: Icon(Icons.credit_card_outlined),
-            selectedIcon: Icon(Icons.credit_card),
+            activeIcon: Icon(Icons.credit_card),
             label: 'Thẻ',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Tài khoản',
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_offer_outlined),
+            activeIcon: Icon(Icons.local_offer),
+            label: 'Ưu đãi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view),
+            label: 'Thêm',
           ),
         ],
       ),
