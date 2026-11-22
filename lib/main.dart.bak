@@ -1,0 +1,478 @@
+
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  runApp(const DemoApp());
+}
+
+class DemoApp extends StatelessWidget {
+  const DemoApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'MB BANK DEMO',
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF0755A4),
+        scaffoldBackgroundColor: const Color(0xFFF3F6FA),
+        useMaterial3: true,
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class TransactionItem {
+  String id;
+  String name;
+  int amount;
+  String type;
+  String note;
+  DateTime date;
+
+  TransactionItem({
+    required this.id,
+    required this.name,
+    required this.amount,
+    required this.type,
+    required this.note,
+    required this.date,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'amount': amount,
+    'type': type,
+    'note': note,
+    'date': date.toIso8601String(),
+  };
+
+  factory TransactionItem.fromJson(Map<String, dynamic> json) {
+    return TransactionItem(
+      id: json['id'],
+      name: json['name'],
+      amount: json['amount'],
+      type: json['type'],
+      note: json['note'],
+      date: DateTime.parse(json['date']),
+    );
+  }
+}
+
+String money(int value) {
+  final digits = value.abs().toString();
+  final formatted = digits.replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+    (m) => '${m[1]}.',
+  );
+  return '${value < 0 ? '-' : ''}$formatted ð';
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  static const int openingBalance = 10000000;
+
+  List<TransactionItem> transactions = [];
+  bool loading = true;
+
+  int get balance {
+    int result = openingBalance;
+    for (final item in transactions) {
+      result += item.type == 'in' ? item.amount : -item.amount;
+    }
+    return result;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('demo_transactions');
+
+    if (saved != null) {
+      final list = jsonDecode(saved) as List;
+      transactions = list
+          .map((e) => TransactionItem.fromJson(e))
+          .toList();
+    }
+
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'demo_transactions',
+      jsonEncode(transactions.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  String dateText(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year} ${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> editTransaction([TransactionItem? old]) async {
+    final nameController = TextEditingController(text: old?.name ?? '');
+    final amountController = TextEditingController(
+      text: old == null ? '' : old.amount.toString(),
+    );
+    final noteController = TextEditingController(text: old?.note ?? '');
+
+    String type = old?.type ?? 'in';
+
+    final result = await showDialog<TransactionItem>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(old == null ? 'Thêm giao d?ch DEMO' : 'S?a giao d?ch'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tên giao d?ch',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'S? ti?n (VNÐ)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: type,
+                      decoration: const InputDecoration(
+                        labelText: 'Lo?i giao d?ch',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'in',
+                          child: Text('Nh?n ti?n gi? l?p'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'out',
+                          child: Text('Chuy?n ti?n gi? l?p'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() => type = value ?? 'in');
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Ghi chú',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('H?y'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    final amount = int.tryParse(
+                      amountController.text.replaceAll('.', '').replaceAll(',', ''),
+                    );
+
+                    if (name.isEmpty || amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui l?ng nh?p thông tin h?p l?'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(
+                      context,
+                      TransactionItem(
+                        id: old?.id ??
+                            DateTime.now().microsecondsSinceEpoch.toString(),
+                        name: name,
+                        amount: amount,
+                        type: type,
+                        note: noteController.text.trim(),
+                        date: old?.date ?? DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Lýu'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nameController.dispose();
+    amountController.dispose();
+    noteController.dispose();
+
+    if (result == null) return;
+
+    setState(() {
+      if (old == null) {
+        transactions.insert(0, result);
+      } else {
+        final index = transactions.indexWhere((e) => e.id == old.id);
+        if (index != -1) transactions[index] = result;
+      }
+    });
+
+    await saveData();
+  }
+
+  Future<void> deleteTransaction(TransactionItem item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa giao d?ch?'),
+        content: const Text('B?n mu?n xóa giao d?ch DEMO này?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('H?y'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => transactions.removeWhere((e) => e.id == item.id));
+      await saveData();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0755A4),
+        foregroundColor: Colors.white,
+        title: const Text(
+          'MB BANK DEMO',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              showAboutDialog(
+                context: context,
+                applicationName: 'MB BANK DEMO',
+                applicationVersion: '1.0 DEMO',
+                children: const [
+                  Text(
+                    '?ng d?ng mô ph?ng ð?c l?p. Không ph?i ?ng d?ng MB Bank chính th?c. Không th?c hi?n giao d?ch th?t.',
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF0755A4),
+                        Color(0xFF1386D5),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'TÀI KHO?N M?U • DEMO',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'S? DÝ MÔ PH?NG',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        money(balance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Tài kho?n: 0000000000',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      const Text(
+                        'Ch? tài kho?n: NGUYEN VAN DEMO',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF2D9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '?NG D?NG DEMO – KHÔNG PH?I NGÂN HÀNG CHÍNH TH?C. M?i s? dý và giao d?ch ð?u gi? l?p.',
+                    style: TextStyle(
+                      color: Color(0xFF805000),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'L?CH S? GIAO D?CH DEMO',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text('${transactions.length} giao d?ch'),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (transactions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(30),
+                    child: Center(
+                      child: Text(
+                        'Chýa có giao d?ch. Nh?n nút + ð? thêm.',
+                      ),
+                    ),
+                  ),
+                ...transactions.map((item) {
+                  final isIncome = item.type == 'in';
+
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: isIncome
+                            ? const Color(0xFFE3F6EA)
+                            : const Color(0xFFFFE9E9),
+                        child: Icon(
+                          isIncome
+                              ? Icons.south_west
+                              : Icons.north_east,
+                          color: isIncome ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      title: Text(
+                        item.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${dateText(item.date)}\n${item.note}',
+                      ),
+                      isThreeLine: true,
+                      trailing: SizedBox(
+                        width: 120,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${isIncome ? '+' : '-'}${money(item.amount)}',
+                              style: TextStyle(
+                                color: isIncome ? Colors.green : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                InkWell(
+                                  onTap: () => editTransaction(item),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(5),
+                                    child: Icon(Icons.edit, size: 18),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () => deleteTransaction(item),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(5),
+                                    child: Icon(Icons.delete_outline, size: 18),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => editTransaction(),
+        backgroundColor: const Color(0xFF0755A4),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm giao d?ch DEMO'),
+      ),
+    );
+  }
+}
